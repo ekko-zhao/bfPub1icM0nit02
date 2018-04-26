@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
+import os
+import re
+import time
+
 from xlwt import *
-import os, re, time
+
 from Log import *
 
 NAME, VERSION, AUTHOR, LICENSE = "Public Monitor", "V0.1", "咚咚呛", "Public (FREE)"
@@ -14,7 +18,7 @@ class Create_Xls:
         self.logger = LogInfo('log/process.log')
 
     def create_xls(self):
-	zuizhong=[]
+        zuizhong = []
         file = Workbook(encoding='utf-8')
         table = {}
         applications = [u'公网开发端口服务详情', u'新增端口服务详情', u'减少端口服务详情', u'弱口令风险']
@@ -43,7 +47,7 @@ class Create_Xls:
                 results = self.change_del_list
             else:
                 results = self.weakpass_result
-	    zuizhong.append(results)
+            zuizhong.append(results)
             for result in results:
                 if application != u'弱口令风险':
                     value = re.split('[:]', result)
@@ -70,7 +74,7 @@ class Create_Xls:
             os.remove(filename)
         file.save(filename)
         self.logger.infostring('generate the result file %s' % filename)
-	print zuizhong
+        print zuizhong
         return zuizhong
 
     def run(self):

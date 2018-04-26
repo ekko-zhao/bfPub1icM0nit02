@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-import smtplib, re
+import re
+import smtplib
+import sys
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
+
 from Log import *
-import sys
 
 reload(sys)
 
@@ -28,8 +29,8 @@ class Send_Email:
         msg["From"] = self.user
         msg["To"] = self.toemail
 
-    #    if self.change_add_list or self.change_del_list or self.weakpass_result:
-	if 1==2:
+        #    if self.change_add_list or self.change_del_list or self.weakpass_result:
+        if 1 == 2:
             msgAlternative = MIMEMultipart('alternative')
             msg.attach(msgAlternative)
             html_format = """
@@ -68,18 +69,18 @@ class Send_Email:
 
             msgAlternative.attach(MIMEText(msg_html, 'html', 'utf-8'))
         else:
-	    format_result='公网开放端口情况\n\n\nip               端口  网络协议\n'
-	    #print str(self.xlsfile)
-	    for eachline in self.xlsfile[0]:
-		print str(eachline)
-	    	format_result+=eachline.replace(':','   ')
-		format_result+='\n'
-            part = MIMEText(format_result,_charset='utf-8')
+            format_result = '公网开放端口情况\n\n\nip               端口  网络协议\n'
+            # print str(self.xlsfile)
+            for eachline in self.xlsfile[0]:
+                print str(eachline)
+                format_result += eachline.replace(':', '   ')
+                format_result += '\n'
+            part = MIMEText(format_result, _charset='utf-8')
             msg.attach(part)
-        #if self.xlsfile:
-        #    part = MIMEApplication(open(self.xlsfile, 'rb').read())
-         #   part.add_header('Content-Disposition', 'attachment', filename=self.xlsfile)
-          #  msg.attach(part)
+            # if self.xlsfile:
+            #    part = MIMEApplication(open(self.xlsfile, 'rb').read())
+            #   part.add_header('Content-Disposition', 'attachment', filename=self.xlsfile)
+            #  msg.attach(part)
         error = 0
         while True:
             if error == 3:

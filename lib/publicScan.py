@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-import os, json, nmap, re
+import json
+import nmap
+import os
+import re
+
 from Log import *
 
 NAME, VERSION, AUTHOR, LICENSE = "Public Monitor", "V0.1", "咚咚呛", "Public (FREE)"
@@ -37,7 +41,7 @@ class PublicScan:
                 scanner = nmap.PortScanner()
                 port = ip_port[1] if isinstance(ip_port[1], int) else int(ip_port[1])
                 scanner.scan(hosts=ip_port[0], arguments='-sS -T4 -p %d' % port)
-		print port
+                print port
                 for targethost in scanner.all_hosts():
                     for proto in scanner[targethost].all_protocols():
                         lport = scanner[targethost][proto].keys()

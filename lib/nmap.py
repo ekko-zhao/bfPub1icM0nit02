@@ -84,22 +84,18 @@ True
 'OS:SCAN(V=5.21%D=11/23%OT=22%CT=1%CU=33028%PV=N%DS=0%DC=L%G=Y%TM=50AFE898%P\\nOS:=x86_64-unknown-linux-gnu)SEQ(SP=105%GCD=1%ISR=107%TI=Z%CI=Z%II=I%TS=8)O\\nOS:PS(O1=M400CST11NW6%O2=M400CST11NW6%O3=M400CNNT11NW6%O4=M400CST11NW6%O5=M\\nOS:400CST11NW6%O6=M400CST11)WIN(W1=8000%W2=8000%W3=8000%W4=8000%W5=8000%W6=\\nOS:8000)ECN(R=Y%DF=Y%T=40%W=8018%O=M400CNNSNW6%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O\\nOS:%A=S+%F=AS%RD=0%Q=)T2(R=N)T3(R=N)T4(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=\\nOS:0%Q=)T5(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%\\nOS:S=A%A=Z%F=R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1(\\nOS:R=Y%DF=N%T=40%IPL=164%UN=0%RIPL=G%RID=G%RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=\\nOS:N%T=40%CD=S)\\n'
 """
 
-
 __author__ = 'Alexandre Norman (norman@xael.org)'
 __version__ = '0.2.6'
 __last_modification__ = '2012.12.13'
 
-
+import collections
 import os
 import re
-import string
+import shlex
 import subprocess
 import sys
 import types
 import xml.dom.minidom
-import shlex
-import collections
-
 
 try:
     from multiprocessing import Process
@@ -107,14 +103,16 @@ except ImportError:
     # For pre 2.6 releases
     from threading import Thread as Process
 
+
 ############################################################################
 
 class PortScanner(object):
     """
     PortScanner allows to use nmap from python
     """
-    
-    def __init__(self, nmap_search_path=('nmap','/usr/bin/nmap','/usr/local/bin/nmap','/sw/bin/nmap','/opt/local/bin/nmap') ):
+
+    def __init__(self, nmap_search_path=(
+    'nmap', '/usr/bin/nmap', '/usr/local/bin/nmap', '/sw/bin/nmap', '/opt/local/bin/nmap')):
         """
         Initialize the module
         detects nmap on the system and nmap version
@@ -123,12 +121,12 @@ class PortScanner(object):
         nmap_search_path = tupple of string where to search for nmap executable. Change this if you want to use a specific version of nmap.
         """
 
-        self._nmap_path = ''                # nmap path
+        self._nmap_path = ''  # nmap path
         self._scan_result = {}
-        self._nmap_version_number = 0       # nmap version number
-        self._nmap_subversion_number = 0    # nmap subversion number
+        self._nmap_version_number = 0  # nmap version number
+        self._nmap_subversion_number = 0  # nmap subversion number
         self._nmap_last_output = ''  # last full ascii nmap output
-        is_nmap_found = False       # true if we have found nmap
+        is_nmap_found = False  # true if we have found nmap
 
         self.__process = None
 
@@ -142,14 +140,12 @@ class PortScanner(object):
             except OSError:
                 pass
             else:
-                self._nmap_path = nmap_path # save path 
+                self._nmap_path = nmap_path  # save path
                 break
         else:
-            raise PortScannerError('nmap program was not found in path. PATH is : {0}'.format(os.getenv('PATH')))            
+            raise PortScannerError('nmap program was not found in path. PATH is : {0}'.format(os.getenv('PATH')))
 
-
-            
-        self._nmap_last_output = bytes.decode(p.communicate()[0]) # store stdout
+        self._nmap_last_output = bytes.decode(p.communicate()[0])  # store stdout
         for line in self._nmap_last_output.split('\n'):
             if regex.match(line) is not None:
                 is_nmap_found = True
@@ -163,14 +159,13 @@ class PortScanner(object):
                 if rv is not None and rsv is not None:
                     # extract version/subversion
                     self._nmap_version_number = int(line[rv.start():rv.end()])
-                    self._nmap_subversion_number = int(line[rsv.start()+1:rsv.end()])
+                    self._nmap_subversion_number = int(line[rsv.start() + 1:rsv.end()])
                 break
 
         if is_nmap_found == False:
             raise PortScannerError('nmap program was not found in path')
 
         return
-
 
     def get_nmap_last_output(self):
         """
@@ -179,8 +174,6 @@ class PortScanner(object):
         """
         return self._nmap_last_output
 
-
-
     def nmap_version(self):
         """
         returns nmap version if detected (int version, int subversion)
@@ -188,18 +181,14 @@ class PortScanner(object):
         """
         return (self._nmap_version_number, self._nmap_subversion_number)
 
-
-
     def listscan(self, hosts='127.0.0.1'):
         """
         do not scan but interpret target hosts and return a list a hosts
         """
         assert type(hosts) is str, 'Wrong type for [hosts], should be a string [was {0}]'.format(type(hosts))
-        
+
         self.scan(hosts, arguments='-sL')
         return self.all_hosts()
-
-
 
     def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV'):
         """
@@ -214,20 +203,24 @@ class PortScanner(object):
         ports = string for ports as nmap use it '22,53,110,143-4564'
         arguments = string of arguments for nmap '-sU -sX -sC'
         """
-        if sys.version_info[0]==2:
-            assert type(hosts) in (str, unicode), 'Wrong type for [hosts], should be a string [was {0}]'.format(type(hosts))
+        if sys.version_info[0] == 2:
+            assert type(hosts) in (str, unicode), 'Wrong type for [hosts], should be a string [was {0}]'.format(
+                type(hosts))
         else:
             assert type(hosts) is str, 'Wrong type for [hosts], should be a string [was {0}]'.format(type(hosts))
-        assert type(ports) in (str, type(None)), 'Wrong type for [ports], should be a string [was {0}]'.format(type(ports))
-        assert type(arguments) is str, 'Wrong type for [arguments], should be a string [was {0}]'.format(type(arguments))
+        assert type(ports) in (str, type(None)), 'Wrong type for [ports], should be a string [was {0}]'.format(
+            type(ports))
+        assert type(arguments) is str, 'Wrong type for [arguments], should be a string [was {0}]'.format(
+            type(arguments))
 
         h_args = shlex.split(hosts)
         f_args = shlex.split(arguments)
-        
-        # Launch scan
-        args = [self._nmap_path, '-oX', '-'] + h_args + ['-p', ports]*(ports!=None) + f_args
 
-        p = subprocess.Popen(args, bufsize=100000, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Launch scan
+        args = [self._nmap_path, '-oX', '-'] + h_args + ['-p', ports] * (ports != None) + f_args
+
+        p = subprocess.Popen(args, bufsize=100000, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
 
         # wait until finished
         # get output
@@ -251,10 +244,10 @@ class PortScanner(object):
                 if len(line) > 0:
                     rgw = regex_warning.search(line)
                     if rgw is not None:
-                        sys.stderr.write(line+'\n')
+                        sys.stderr.write(line + '\n')
                         pass
                     else:
-                        #raise PortScannerError(nmap_err)
+                        # raise PortScannerError(nmap_err)
                         nmap_err_keep_trace.append(nmap_err)
 
         # nmap xml output looks like :
@@ -279,11 +272,10 @@ class PortScanner(object):
 
         scan_result = {}
 
-
         try:
             dom = xml.dom.minidom.parseString(self._nmap_last_output)
         except xml.parsers.expat.ExpatError:
-            if len(nmap_err)>0:
+            if len(nmap_err) > 0:
                 raise PortScannerError(nmap_err)
             else:
                 raise PortScannerError(self._nmap_last_output)
@@ -292,28 +284,27 @@ class PortScanner(object):
         scan_result['nmap'] = {
             'command_line': dom.getElementsByTagName('nmaprun')[0].getAttributeNode('args').value,
             'scaninfo': {},
-            'scanstats':{'timestr':dom.getElementsByTagName("finished")[0].getAttributeNode('timestr').value,
-                         'elapsed':dom.getElementsByTagName("finished")[0].getAttributeNode('elapsed').value,
-                         'uphosts':dom.getElementsByTagName("hosts")[0].getAttributeNode('up').value,
-                         'downhosts':dom.getElementsByTagName("hosts")[0].getAttributeNode('down').value,
-                         'totalhosts':dom.getElementsByTagName("hosts")[0].getAttributeNode('total').value}
-            }
+            'scanstats': {'timestr': dom.getElementsByTagName("finished")[0].getAttributeNode('timestr').value,
+                          'elapsed': dom.getElementsByTagName("finished")[0].getAttributeNode('elapsed').value,
+                          'uphosts': dom.getElementsByTagName("hosts")[0].getAttributeNode('up').value,
+                          'downhosts': dom.getElementsByTagName("hosts")[0].getAttributeNode('down').value,
+                          'totalhosts': dom.getElementsByTagName("hosts")[0].getAttributeNode('total').value}
+        }
 
         # if there was an error
-        if len(nmap_err_keep_trace)>0:
+        if len(nmap_err_keep_trace) > 0:
             scan_result['nmap']['scaninfo']['error'] = nmap_err_keep_trace
 
         # info about scan
         for dsci in dom.getElementsByTagName('scaninfo'):
-            scan_result['nmap']['scaninfo'][dsci.getAttributeNode('protocol').value] = {                
+            scan_result['nmap']['scaninfo'][dsci.getAttributeNode('protocol').value] = {
                 'method': dsci.getAttributeNode('type').value,
                 'services': dsci.getAttributeNode('services').value
-                }
-
+            }
 
         scan_result['scan'] = {}
-        
-        for dhost in  dom.getElementsByTagName('host'):
+
+        for dhost in dom.getElementsByTagName('host'):
             # host ip
             host = dhost.getElementsByTagName('address')[0].getAttributeNode('addr').value
             hostname = ''
@@ -323,22 +314,22 @@ class PortScanner(object):
             for dstatus in dhost.getElementsByTagName('status'):
                 # status : up...
                 scan_result['scan'][host]['status'] = {'state': dstatus.getAttributeNode('state').value,
-                                               'reason': dstatus.getAttributeNode('reason').value}
+                                                       'reason': dstatus.getAttributeNode('reason').value}
             for dstatus in dhost.getElementsByTagName('uptime'):
                 # uptime : seconds, lastboot
                 scan_result['scan'][host]['uptime'] = {'seconds': dstatus.getAttributeNode('seconds').value,
-                                                'lastboot': dstatus.getAttributeNode('lastboot').value}
+                                                       'lastboot': dstatus.getAttributeNode('lastboot').value}
             for dport in dhost.getElementsByTagName('port'):
                 # protocol
                 proto = dport.getAttributeNode('protocol').value
                 # port number converted as integer
-                port =  int(dport.getAttributeNode('portid').value)
+                port = int(dport.getAttributeNode('portid').value)
                 # state of the port
                 state = dport.getElementsByTagName('state')[0].getAttributeNode('state').value
                 # reason
                 reason = dport.getElementsByTagName('state')[0].getAttributeNode('reason').value
                 # name, product, version, extra info and conf if any
-                name,product,version,extrainfo,conf = '','','','',''
+                name, product, version, extrainfo, conf = '', '', '', '', ''
                 for dname in dport.getElementsByTagName('service'):
                     name = dname.getAttributeNode('name').value
                     if dname.hasAttribute('product'):
@@ -353,12 +344,12 @@ class PortScanner(object):
                 if not proto in list(scan_result['scan'][host].keys()):
                     scan_result['scan'][host][proto] = {}
                 scan_result['scan'][host][proto][port] = {'state': state,
-                                                  'reason': reason,
-                                                  'name': name,
-                                                  'product': product,
-                                                  'version': version,
-                                                  'extrainfo': extrainfo,
-                                                  'conf': conf}
+                                                          'reason': reason,
+                                                          'name': name,
+                                                          'product': product,
+                                                          'version': version,
+                                                          'extrainfo': extrainfo,
+                                                          'conf': conf}
                 script_id = ''
                 script_out = ''
                 # get script output if any
@@ -395,10 +386,8 @@ class PortScanner(object):
                         'osfamily': osfamily,
                         'osgen': osgen,
                         'accuracy': accuracy
-                        }
-                    )
-                    
-
+                    }
+                )
 
             for dport in dhost.getElementsByTagName('osmatch'):
                 # <osmatch name="Linux 2.6.31" accuracy="98" line="30043"/>
@@ -419,9 +408,8 @@ class PortScanner(object):
                         'name': name,
                         'accuracy': accuracy,
                         'line': line,
-                        }
-                    )
-
+                    }
+                )
 
             for dport in dhost.getElementsByTagName('osfingerprint'):
                 # <osfingerprint fingerprint="OS:SCAN(V=5.50%D=11/[...]S)&#xa;"/>
@@ -433,23 +421,19 @@ class PortScanner(object):
 
                 scan_result['scan'][host]['fingerprint'] = fingerprint
 
-
-
-        self._scan_result = scan_result # store for later use
+        self._scan_result = scan_result  # store for later use
         return scan_result
 
-
-    
     def __getitem__(self, host):
         """
         returns a host detail
         """
-        if sys.version_info[0]==2:
-            assert type(host) in (str, unicode), 'Wrong type for [host], should be a string [was {0}]'.format(type(host))
+        if sys.version_info[0] == 2:
+            assert type(host) in (str, unicode), 'Wrong type for [host], should be a string [was {0}]'.format(
+                type(host))
         else:
             assert type(host) is str, 'Wrong type for [host], should be a string [was {0}]'.format(type(host))
         return self._scan_result['scan'][host]
-
 
     def all_hosts(self):
         """
@@ -460,7 +444,6 @@ class PortScanner(object):
         listh = list(self._scan_result['scan'].keys())
         listh.sort()
         return listh
-        
 
     def command_line(self):
         """
@@ -473,7 +456,6 @@ class PortScanner(object):
 
         return self._scan_result['nmap']['command_line']
 
-
     def scaninfo(self):
         """
         returns scaninfo structure
@@ -485,8 +467,7 @@ class PortScanner(object):
         assert 'scaninfo' in self._scan_result['nmap'], 'Do a scan before trying to get result !'
 
         return self._scan_result['nmap']['scaninfo']
-            
-        
+
     def scanstats(self):
         """
         returns scanstats structure
@@ -497,8 +478,7 @@ class PortScanner(object):
         assert 'nmap' in self._scan_result, 'Do a scan before trying to get result !'
         assert 'scanstats' in self._scan_result['nmap'], 'Do a scan before trying to get result !'
 
-        return self._scan_result['nmap']['scanstats']        
-
+        return self._scan_result['nmap']['scanstats']
 
     def has_host(self, host):
         """
@@ -511,8 +491,6 @@ class PortScanner(object):
             return True
 
         return False
-
-
 
 
 ############################################################################
@@ -534,7 +512,6 @@ class PortScannerAsync(object):
         self._nm = PortScanner()
         return
 
-
     def __del__(self):
         """
         Cleanup when deleted
@@ -542,7 +519,6 @@ class PortScannerAsync(object):
         if self._process is not None and self._process.is_alive():
             self._process.terminate()
         return
-
 
     def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV', callback=None):
         """
@@ -557,10 +533,14 @@ class PortScannerAsync(object):
         """
 
         assert type(hosts) is str, 'Wrong type for [hosts], should be a string [was {0}]'.format(type(hosts))
-        assert type(ports) in (str, type(None)), 'Wrong type for [ports], should be a string [was {0}]'.format(type(ports))
-        assert type(arguments) is str, 'Wrong type for [arguments], should be a string [was {0}]'.format(type(arguments))
-        assert type(callback) in (types.FunctionType, type(None)), 'Wrong type for [callback], should be a function or None [was {0}]'.format(type(callback))
-        
+        assert type(ports) in (str, type(None)), 'Wrong type for [ports], should be a string [was {0}]'.format(
+            type(ports))
+        assert type(arguments) is str, 'Wrong type for [arguments], should be a string [was {0}]'.format(
+            type(arguments))
+        assert type(callback) in (
+        types.FunctionType, type(None)), 'Wrong type for [callback], should be a function or None [was {0}]'.format(
+            type(callback))
+
         def scan_progressive(self, hosts, ports, arguments, callback):
             for host in self._nm.listscan(hosts):
                 try:
@@ -574,11 +554,10 @@ class PortScannerAsync(object):
         self._process = Process(
             target=scan_progressive,
             args=(self, hosts, ports, arguments, callback)
-            )
+        )
         self._process.daemon = True
         self._process.start()
         return
-
 
     def stop(self):
         """
@@ -588,18 +567,16 @@ class PortScannerAsync(object):
             self._process.terminate()
         return
 
-
     def wait(self, timeout=None):
         """
         Wait for the current scan process to finish, or timeout
         """
 
-        assert type(timeout) in (int, type(None)), 'Wrong type for [timeout], should be an int or None [was {0}]'.format(type(timeout))
+        assert type(timeout) in (
+        int, type(None)), 'Wrong type for [timeout], should be an int or None [was {0}]'.format(type(timeout))
 
         self._process.join(timeout)
         return
-
-    
 
     def still_scanning(self):
         """
@@ -610,16 +587,16 @@ class PortScannerAsync(object):
         except:
             return False
 
-    
 
 ############################################################################
-    
+
 
 
 class PortScannerHostDict(dict):
     """
     Special dictionnary class for storing and accessing host scan result
     """
+
     def hostname(self):
         """
         returns hostname
@@ -648,8 +625,6 @@ class PortScannerHostDict(dict):
         lp.sort()
         return lp
 
-
-
     def all_tcp(self):
         """
         returns list of tcp ports
@@ -659,19 +634,17 @@ class PortScannerHostDict(dict):
             ltcp.sort()
             return ltcp
         return []
-            
-    
+
     def has_tcp(self, port):
         """
         returns True if tcp port has info, False otherwise
         """
         assert type(port) is int, 'Wrong type for [port], should be an int [was {0}]'.format(type(port))
-        
+
         if ('tcp' in list(self.keys())
             and port in list(self['tcp'].keys())):
             return True
         return False
-
 
     def tcp(self, port):
         """
@@ -679,7 +652,6 @@ class PortScannerHostDict(dict):
         """
         assert type(port) is int, 'Wrong type for [port], should be an int [was {0}]'.format(type(port))
         return self['tcp'][port]
-
 
     def all_udp(self):
         """
@@ -690,7 +662,6 @@ class PortScannerHostDict(dict):
             ludp.sort()
             return ludp
         return []
-
 
     def has_udp(self, port):
         """
@@ -703,7 +674,6 @@ class PortScannerHostDict(dict):
             return True
         return False
 
-
     def udp(self, port):
         """
         returns info for udp port
@@ -711,7 +681,6 @@ class PortScannerHostDict(dict):
         assert type(port) is int, 'Wrong type for [port], should be an int [was {0}]'.format(type(port))
 
         return self['udp'][port]
-
 
     def all_ip(self):
         """
@@ -722,7 +691,6 @@ class PortScannerHostDict(dict):
             lip.sort()
             return lip
         return []
-
 
     def has_ip(self, port):
         """
@@ -735,7 +703,6 @@ class PortScannerHostDict(dict):
             return True
         return False
 
-
     def ip(self, port):
         """
         returns info for ip port
@@ -743,7 +710,6 @@ class PortScannerHostDict(dict):
         assert type(port) is int, 'Wrong type for [port], should be an int [was {0}]'.format(type(port))
 
         return self['ip'][port]
-
 
     def all_sctp(self):
         """
@@ -754,7 +720,6 @@ class PortScannerHostDict(dict):
             lsctp.sort()
             return lsctp
         return []
-
 
     def has_sctp(self, port):
         """
@@ -767,7 +732,6 @@ class PortScannerHostDict(dict):
             return True
         return False
 
-
     def sctp(self, port):
         """
         returns info for sctp port
@@ -777,7 +741,6 @@ class PortScannerHostDict(dict):
         return self['sctp'][port]
 
 
-    
 ############################################################################
 
 
@@ -785,9 +748,9 @@ class PortScannerError(Exception):
     """
     Exception error class for PortScanner class
     """
+
     def __init__(self, value):
         self.value = value
-
 
     def __str__(self):
         return repr(self.value)
@@ -815,9 +778,9 @@ def __get_last_online_version():
 # MAIN -------------------
 if __name__ == '__main__':
     import doctest
+
     # non regression test
     doctest.testmod()
 
 
-#<EOF>######################################################################
-
+# <EOF>######################################################################

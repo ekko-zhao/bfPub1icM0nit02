@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-import os, subprocess, re
+import os
+import re
+import subprocess
+
 from Log import *
 
 NAME, VERSION, AUTHOR, LICENSE = "Public Monitor", "V0.1", "咚咚呛", "Public (FREE)"
