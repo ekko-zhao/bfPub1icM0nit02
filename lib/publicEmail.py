@@ -2,6 +2,7 @@
 import re
 import smtplib
 import sys
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -69,10 +70,20 @@ class Send_Email:
 
             msgAlternative.attach(MIMEText(msg_html, 'html', 'utf-8'))
         else:
-            format_result = '公网开放端口情况\n\n\nip               端口  网络协议\n'
+            format_result = '\n新增开放端口情况\nip               端口  网络协议\n'
             # print str(self.xlsfile)
-            for eachline in self.xlsfile[0]:
-                print str(eachline)
+            for result in self.change_add_list:  # 新增
+                format_result += result.replace(':', '   ')
+                format_result += '\n'
+
+            format_result += '\n\n关闭开放端口情况\nip               端口  网络协议\n'
+            for result in self.change_del_list:  # 关闭
+                format_result += result.replace(':', '   ')
+                format_result += '\n'
+
+            format_result += '\n\n公网开放端口情况\nip               端口  网络协议\n'
+            for eachline in self.xlsfile[0]:  # 开放
+                # print str(eachline)
                 format_result += eachline.replace(':', '   ')
                 format_result += '\n'
             part = MIMEText(format_result, _charset='utf-8')
